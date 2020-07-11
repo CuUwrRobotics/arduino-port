@@ -1,45 +1,17 @@
 // Modified by Nicholas Steele to help port Arduino libraries to Raspberry Pi
 // Files modifications for port are marked with a # in comments
+// Original files gotten from arduino AVR core github 7/5/2020.
 
-/*
- * TwoWire.h - TWI/I2C library for Arduino & Wiring
- * Copyright (c) 2006 Nicholas Zambetti.  All right reserved.
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- * Modified 2012 by Todd Krein (todd@krein.org) to implement repeated starts
- * Modified 2020 by Greyson Christoforo (grey@christoforo.net) to implement timeouts
- */
 
 #ifndef TWO_WIRE_H
 #define TWO_WIRE_H
 
-// TODO: FIX THESE!
-#include </usr/include/linux/types.h>
-// #include </usr/include/linux/stat.h>
-#include </usr/include/string.h>
-#include </usr/include/stdlib.h>
-#include </usr/include/errno.h>
-#include </usr/include/fcntl.h>
-#include </usr/include/unistd.h>
-// #include </usr/include/linux/ioctl.h>
-#include <sys/ioctl.h>
-#include </usr/include/linux/i2c.h>
-#include </usr/include/linux/i2c-dev.h>
-
-#include <stdint.h>
-#include <ros/ros.h>
-// #include </usr/include/stdio.h>
-#include <stdio.h>
-#include <stddef.h>
+#include <errno.h> // errno stuff
+#include <fcntl.h> // open(), close()
+#include <unistd.h> // read(), write()
+#include <sys/ioctl.h> // ioctl()
+#include <stdint.h> // Explicit bitwidth integers like uint8_t
+#include <ros/ros.h> // ROS_ERROR()
 
 #define I2C_DEVICE_FILE "/dev/i2c-1" // The I2C device node file
 // # From deprecated WiringPi
