@@ -128,7 +128,7 @@ catkin_package(
 include_directories(
  include
  src
- src/includes
+ src/include
   ${catkin_INCLUDE_DIRS}
   # /home/pi/diagnostics_ws/src/diagnostic_display/include/Adafruit_SSD1306-master/
 #  /usr/include stdint.h
@@ -225,8 +225,12 @@ include_directories(
 #add_dependencies(talker beginner_tutorials_generate_messages_cpp)
 
 add_executable(${PROJECT_NAME}_node src/main.cpp src/Ardu_Wire.cpp ) #src/Ardu_SPI.cpp)
-target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES} # ${WIRINGPI_LIBRARY} #${SSD1306_LOC} #Adafruit_SSD1306
-)
+target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES}) # ${WIRINGPI_LIBRARY} #${SSD1306_LOC} #Adafruit_SSD1306
+
+# For verifying I2C code
+# add_executable(${PROJECT_NAME}_disp_node src/display.cpp src/Ardu_Wire.cpp src/include/SSD1306_GFX.cpp src/include/gldcfont.c) #src/Ardu_SPI.cpp)
+# target_link_libraries(${PROJECT_NAME}_disp_node ${catkin_LIBRARIES}) # ${WIRINGPI_LIBRARY} #${SSD1306_LOC} #Adafruit_SSD1306
+
 #add_dependencies(listener beginner_tutorials_generate_messages_cpp wiringPi #Adafruit_SSD1306
 #stdint
 #)

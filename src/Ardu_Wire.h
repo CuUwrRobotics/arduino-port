@@ -41,12 +41,12 @@
 #include <stdio.h>
 #include <stddef.h>
 
-#define RASPI_I2C_MAX_BUFFER 8192 // TODO: check this number.
 #define I2C_DEVICE_FILE "/dev/i2c-1" // The I2C device node file
 // # From deprecated WiringPi
 #define I2C_SMBUS_BLOCK_MAX	32 /* As specified in SMBus standard */
 
-#define BUFFER_LENGTH 32 // TODO: possibly set to RASPI_I2C_MAX_BUFFER
+// TODO: rename this macro to be less generic
+#define BUFFER_LENGTH 32 // Limited by I2C_SMBUS_BLOCK_MAX
 
 // SMBus transaction sizes for use with i2c_smbus_data
 #define I2C_SMBUS_QUICK       0
@@ -69,13 +69,14 @@
 
 // # Holds file descriptor for device node
 static int i2cDeviceFile;
+static uint8_t rxBufferLength;
 
 class TwoWire {
 private:
 
 	static uint8_t rxBuffer[];
 	static uint8_t rxBufferIndex;
-	// static uint8_t rxBufferLength; // # Removed for port
+	// static uint8_t rxBufferLength;
 
 	static uint8_t txAddress;
 	static uint8_t txBuffer[];
@@ -131,7 +132,7 @@ public:
 
 	virtual size_t write(const uint8_t *, size_t);
 
-	virtual int readBlock(); // # Added for RPI port
+	virtual int readBlock(uint8_t addr, int length); // # Added for RPI port
 
 	virtual int available(void);
 

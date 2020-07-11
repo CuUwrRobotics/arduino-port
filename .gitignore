@@ -1,3 +1,9 @@
+# Testing stuff
+src/include
+src/include/*
+src/display.h
+src/display.cpp
+
 # Prerequisites
 *.d
 

@@ -49,9 +49,8 @@ TwoWire::TwoWire()
 
 // Public Methods //////////////////////////////////////////////////////////////
 
-// TODO: Set bitrate (happened in call to twi_init())
-void TwoWire::begin(void)
-{
+// # Bitrate is normally set, but that needs to be done through configs on RPI.
+void TwoWire::begin(void) {
 	// Open device file.
 	i2cDeviceFile = open(I2C_DEVICE_FILE, O_RDWR);
 	printf("FD: %d\n", i2cDeviceFile);
@@ -63,10 +62,9 @@ void TwoWire::begin(void)
 			std::strerror(errno));
 	}
 	rxBufferIndex = 0;
-	// rxBufferLength = 0;
+	rxBufferLength = 0;
 
 	txBufferIndex = 0;
-	// txBufferLength = 0;
 } // TwoWire::begin
 
 /**
@@ -99,54 +97,32 @@ void TwoWire::end(void)
 	close(i2cDeviceFile); // Closes the linux device node.
 } // TwoWire::end
 
-/**
- * TODO
- * Set clock frequency
- */
-
+// # Can't do on RPI since this happens at boot.
 void TwoWire::setClock(uint32_t clock)
 {
-	// twi_setFrequency(clock);
 } // TwoWire::setClock
 
 /**
- * TODO
- * @param timeout a timeout value in microseconds, if zero then timeout checking is disabled
- * @param reset_with_timeout if true then TWI interface will be automatically reset on timeout
- *                           if false then TWI interface will not be reset on timeout
+ # Not implemented for RPI port.
  */
 void TwoWire::setWireTimeout(uint32_t timeout, bool reset_with_timeout){
-	// twi_setTimeoutInMicros(timeout, reset_with_timeout);
 } // TwoWire::setWireTimeout
 
 /**
- * TODO
- * Returns whether timout has been triggered.
- *
- * @return true if timeout has occured since the flag was last cleared.
+ # Not implemented for RPI port.
  */
 bool TwoWire::getWireTimeoutFlag(void){
-	// return(twi_manageTimeoutFlag(false));
+	return false;
 } // TwoWire::getWireTimeoutFlag
 
 /**
- * TODO
- * Clears the timeout flag.
+ # Not implemented for RPI port.
  */
 void TwoWire::clearWireTimeoutFlag(void){
-	// twi_manageTimeoutFlag(true);
 } // TwoWire::clearWireTimeoutFlag
 
 /**
  * Handle data request to given register.
- * Must:
- * -> beginTransmission
- * -> Check that isize <= 3
- * -> Send all 4 iaddress pieces as bytes
- * -> endTransmission
- * -> Read up to buffer length (uses twi_readFrom)
- * -> Reset index = 0, and length = total read data.
- * -> Return ammount of read data
  */
 
 uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint32_t
@@ -175,15 +151,7 @@ uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint32_t
 		quantity = BUFFER_LENGTH;
 	}
 	// perform blocking read into buffer
-	// uint8_t read = twi_readFrom(address, rxBuffer, quantity, sendStop);
-	// TODO: blocking
-	uint8_t read = TwoWire::read();
-
-	// set rx buffer iterator vars
-	// # Buffer index replaces buffer length since both vars are not needed for RasPi
-	rxBufferIndex = read;
-
-	return read;
+	return readBlock(address, quantity);
 } // TwoWire::requestFrom
 
 /**
@@ -224,14 +192,7 @@ uint8_t TwoWire::requestFrom(int address, int quantity, int sendStop)
 } // TwoWire::requestFrom
 
 /**
- * -> Assign address for transmission to txAddress
- * -> Raise transmitting flag
- * -> Reset tx buffer index and length = 0
- *
- # Buffer length not needed
- *
- * @param address TODO
- * @return TODO
+ # No functional changes
  */
 
 void TwoWire::beginTransmission(uint8_t address)
@@ -247,8 +208,6 @@ void TwoWire::beginTransmission(uint8_t address)
 
 /**
  # No change
- * @param address TODO
- * @return TODO
  */
 
 void TwoWire::beginTransmission(int address)
@@ -260,11 +219,10 @@ void TwoWire::beginTransmission(int address)
  * Opens, sets up, sends data on, then closes the I2C device.
  * @return: 0 .. success
  *          1 .. length to long for buffer
- *          2 .. address send, NACK received (TODO)
- *          3 .. data send, NACK received (TODO)
+ *          2 .. address send, NACK received (can't do on RPI)
+ *          3 .. data send, NACK received (can't do on RPI)
  *          4 .. other twi error (lost bus arbitration, bus error, ..)
- *          5 .. timeout (TODO)
- * TODO: make blocking
+ *          5 .. timeout (not doing on RPI)
  */
 
 uint8_t TwoWire::endTransmission(uint8_t sendStop)
@@ -272,11 +230,11 @@ uint8_t TwoWire::endTransmission(uint8_t sendStop)
 	// transmit buffer (blocking)
 	static int s; // For storing write data size
 	transmitting = 0; // This is set to zero regardless of success
-	// We now have access to the device file, time to set it up.
-	s = ioctl(i2cDeviceFile, I2C_SLAVE, txAddress); // TODO: fix I2C_SLAVE if needed
+	// We have access to the device file, time to connect to a specific address
+	s = ioctl(i2cDeviceFile, I2C_SLAVE, txAddress); // Connect to I2C slave on txAddress
 	if (s < 0) {
 		ROS_ERROR(
-			"%s in %s:%d could not use ioctl on fd %d (for device \"%s\"). Errno: %s",
+			"%s in %s:%d ioctl could not connect to I2C slave. FD %d (for device \"%s\"). Errno: %s",
 			__PRETTY_FUNCTION__, __FILE__, __LINE__, i2cDeviceFile,
 			I2C_DEVICE_FILE,
 			std::strerror(errno));
@@ -296,7 +254,7 @@ uint8_t TwoWire::endTransmission(uint8_t sendStop)
 				__PRETTY_FUNCTION__, __FILE__, __LINE__, I2C_DEVICE_FILE,
 				i2cDeviceFile, std::strerror(errno));
 			txBufferIndex = 0; // Reset buffers
-			return 4; // Generic error; TODO make this more specific
+			return 4;
 		}
 	}
 	txBufferIndex = 0; // Reset and return success
@@ -338,7 +296,7 @@ size_t TwoWire::write(uint8_t data)
 		// in slave send mode
 		// reply to master
 		static int s; // For storing write data size
-		s = ioctl(i2cDeviceFile, I2C_SLAVE, txAddress); // TODO: fix I2C_SLAVE if needed
+		s = ioctl(i2cDeviceFile, I2C_SLAVE, txAddress);
 		if (s < 0) {
 			ROS_ERROR(
 				"%s in %s:%d could not use ioctl on fd %d (for device \"%s\"). Errno: %s",
@@ -354,7 +312,7 @@ size_t TwoWire::write(uint8_t data)
 				__PRETTY_FUNCTION__, __FILE__, __LINE__, I2C_DEVICE_FILE,
 				i2cDeviceFile, std::strerror(errno));
 			txBufferIndex = 0; // Reset buffers
-			return 0; // Generic error; TODO make this more specific
+			return 0;
 		}
 
 		txBufferIndex = 0; // Reset and return success
@@ -364,8 +322,6 @@ size_t TwoWire::write(uint8_t data)
 } // TwoWire::write
 
 /**
- # No change if transmitting.
- * TODO: If tranmitting flag was not high, just transmit the data as a slave response
  */
 
 size_t TwoWire::write(const uint8_t *data, size_t quantity)
@@ -379,13 +335,34 @@ size_t TwoWire::write(const uint8_t *data, size_t quantity)
 		for (size_t i = 0; i < quantity; ++i) {
 			write(data[i]);
 		}
-	} else { // TODO
-		ROS_ERROR(
-			"%s in %s:%d Wants to write as a slave device. Not currently supported.",
-			__PRETTY_FUNCTION__, __FILE__, __LINE__);
+	} else { // TODO: verify this code works
+		// ROS_ERROR(
+		// 	"%s in %s:%d Wants to write as a slave device. Not currently supported.",
+		// 	__PRETTY_FUNCTION__, __FILE__, __LINE__);
 		// in slave send mode
 		// reply to master
-		// twi_transmit(data, quantity);
+		static int s; // For storing write data size
+		s = ioctl(i2cDeviceFile, I2C_SLAVE, txAddress);
+		if (s < 0) {
+			ROS_ERROR(
+				"%s in %s:%d could not use ioctl on fd %d (for device \"%s\"). Errno: %s",
+				__PRETTY_FUNCTION__, __FILE__, __LINE__, i2cDeviceFile,
+				I2C_DEVICE_FILE,
+				std::strerror(errno));
+			return 0; // Generic error
+		}
+		s = ::write(i2cDeviceFile, data, quantity); // Send the one byte
+		if (s < 0) {
+			ROS_ERROR(
+				"%s in %s:%d could not write to device \"%s\" (FD = %d). Errno: %s",
+				__PRETTY_FUNCTION__, __FILE__, __LINE__, I2C_DEVICE_FILE,
+				i2cDeviceFile, std::strerror(errno));
+			txBufferIndex = 0; // Reset buffers
+			return 0;
+		}
+
+		txBufferIndex = 0; // Reset and return success
+		return 1; // Success
 	}
 	return quantity;
 } // TwoWire::write
@@ -395,47 +372,95 @@ size_t TwoWire::write(const uint8_t *data, size_t quantity)
  # I2C lines. Meant for internal use only.
  * @return Data in buffer left to read.
  */
-int TwoWire::readBlock() {
-	if (rxBufferIndex >= BUFFER_LENGTH - 1) // Don't bother if there's not enough space
-		return rxBufferIndex;
+
+int TwoWire::readBlock(uint8_t addr = txAddress, int length = BUFFER_LENGTH) {
+	if (length > BUFFER_LENGTH)
+		return -1; // Too long
 	static int s;
-	s = ::read(i2cDeviceFile, rxBuffer, BUFFER_LENGTH - rxBufferIndex);
+	memset(rxBuffer, 0, BUFFER_LENGTH); // Reset read buffer
+	rxBufferLength = 0;
+	rxBufferIndex = 0;
+	// Start by trying to set address
+	// printf("Connecting to I2C device 0x%2x\n", addr);
+	s = ioctl(i2cDeviceFile, I2C_SLAVE, addr); // Connect to I2C slave on addr
+	// printf("\tResult: %d\n", s);
+	if (s < 0) {
+		ROS_ERROR(
+			"%s in %s:%d ioctl could not connect to I2C slave. FD %d (for device \"%s\"). Errno: %s",
+			__PRETTY_FUNCTION__, __FILE__, __LINE__, i2cDeviceFile, I2C_DEVICE_FILE,
+			std::strerror(errno));
+		return 4; // Generic error
+	}
+	s = 0; // reuse s
+	// Got device and connected to correct address, now read from it.
+	s = ::read(i2cDeviceFile, rxBuffer, length);
+	printf("Read block running, l=%d, s=%d\n", length, s);
 	if (s < 0) {
 		ROS_ERROR(
 			"%s in %s:%d could not read device \"%s\" on fd %d. Errno: %s",
 			__PRETTY_FUNCTION__, __FILE__, __LINE__, I2C_DEVICE_FILE, i2cDeviceFile,
 			std::strerror(errno));
 		return -1;
-	} else {
-		rxBufferIndex += s;
-		return rxBufferIndex;
 	}
+	rxBufferLength = s;
+	printf("readBlock dump: ");
+	for (int i = 0; i < rxBufferLength; i++) {
+		printf("0x%2x, ", rxBuffer[i]);
+	}
+	printf("\n");
+	return rxBufferLength;
 } // readBlock
 
 /**
+ # See TwoWire::read()
  */
 
 int TwoWire::available(void)
 {
 	// # Check for data first. readBlock will store that data in the buffer.
-	readBlock();
-	if (rxBufferIndex > 0)
-		return rxBufferIndex;
+	if (rxBufferLength == 0) {
+		readBlock(); // Read for data if there isn't any left
+		// printf("%s read block\n", __PRETTY_FUNCTION__);
+	}
+	// printf("\tavail=%d\n", rxBufferLength - rxBufferIndex);
+	if (rxBufferLength > 0)
+		return rxBufferLength - rxBufferIndex;
+	return 0;
 } // TwoWire::available
 
 /**
+ # In the Arduino code, this would not run readBlock() since the buffers were
+ # written by a called event any time data was read. This is not possible on
+ # the RPI, so instead a data read runs if there is nothing in the read buffer.
+ #
+ # This is sketchy and needs to be revisited. For now, any time a read is
+ # necesary, it will only happen if rxBufferLength == 0 or if readBlock() is
+ # explicitly called.
  */
 
 int TwoWire::read(void)
 {
 	// # Reads data directly, filling the buffer with any data
-	readBlock();
-	if (rxBufferIndex > 0)
-		return rxBuffer[rxBufferIndex--];
-	else return -1;
+	if (rxBufferLength == 0)
+		readBlock(); // Read for data if there isn't any left
+
+	// No data was on bus.
+	if (rxBufferLength == 0)
+		return -1;
+	// If the index is at the end of the buffer
+	// if (rxBufferIndex == rxBufferLength)
+	// 	return -1;
+	// Index is lower than length and length > 0, so return some data and increment index.
+	uint8_t value = rxBuffer[rxBufferIndex++];
+
+	// if (rxBufferLength == rxBufferIndex)
+	// rxBufferLength = 0; // reset buffer at end.
+
+	return value;
 } // TwoWire::read
 
 /**
+ # See TwoWire::read()
  */
 
 int TwoWire::peek(void)
@@ -444,19 +469,13 @@ int TwoWire::peek(void)
 	// slave rx event callback
 	// or after requestFrom(address, numBytes)
 
-	// int value = -1;
-
 	// # Check for data first. readBlock will store that data in the buffer.
-	readBlock();
-	if (rxBufferIndex > 0)
+	if (rxBufferLength == 0)
+		readBlock(); // Read for data if there isn't any left
+	if (rxBufferIndex < rxBufferLength) {
 		return rxBuffer[rxBufferIndex];
-	else return -1;
-
-	// if (rxBufferIndex < rxBufferLength) {
-	// 	value = rxBuffer[rxBufferIndex];
-	// }
-
-	// return value;
+	}
+	return -1;
 } // TwoWire::peek
 
 /**
