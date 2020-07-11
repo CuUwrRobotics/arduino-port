@@ -224,7 +224,7 @@ include_directories(
 #target_link_libraries(talker ${catkin_LIBRARIES})
 #add_dependencies(talker beginner_tutorials_generate_messages_cpp)
 
-add_executable(${PROJECT_NAME}_node src/main.cpp src/includes/Ardu_Wire.cpp src/includes/Ardu_SPI.cpp)
+add_executable(${PROJECT_NAME}_node src/main.cpp src/Ardu_Wire.cpp ) #src/Ardu_SPI.cpp)
 target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES} # ${WIRINGPI_LIBRARY} #${SSD1306_LOC} #Adafruit_SSD1306
 )
 #add_dependencies(listener beginner_tutorials_generate_messages_cpp wiringPi #Adafruit_SSD1306
