@@ -8,7 +8,6 @@ project(arduino_port_lib)
 # LIBRARY BUILD/INSTALL CONFIGS
 
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
 )
 
 FIND_LIBRARY(WIRINGPI_LIBRARY wiringPi /usr/include )
@@ -21,7 +20,6 @@ include_directories(
 
 catkin_package(INCLUDE_DIRS include
                LIBRARIES arduino_port_spi arduino_port_wire
-               CATKIN_DEPENDS roscpp
                DEPENDS $(WIRINGPI_LIBRARY)
                )
 
@@ -44,10 +42,9 @@ install(DIRECTORY include/${PROJECT_NAME}/
 
 
 ################################################################################
-# TESTING NODE BUILD CONFIGS
+# TESTING NODES BUILD CONFIGS
 
 # find_package(catkin REQUIRED COMPONENTS
-#   roscpp
 # )
 #
 # FIND_LIBRARY(WIRINGPI_LIBRARY wiringPi /usr/include)

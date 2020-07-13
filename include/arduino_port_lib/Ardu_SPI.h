@@ -1,18 +1,6 @@
 // Modified by Nicholas Steele to help port Arduino libraries to Raspberry Pi
 // Files modifications for port are marked with a # in comments
-
-/*
- * Copyright (c) 2010 by Cristian Maglie <c.maglie@arduino.cc>
- * Copyright (c) 2014 by Paul Stoffregen <paul@pjrc.com> (Transaction API)
- * Copyright (c) 2014 by Matthijs Kooijman <matthijs@stdin.nl> (SPISettings AVR)
- * Copyright (c) 2014 by Andrew J. Kroll <xxxajk@gmail.com> (atomicity fixes)
- * SPI Master library for arduino.
- *
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of either the GNU General Public License version 2
- * or the GNU Lesser General Public License version 2.1, both as
- * published by the Free Software Foundation.
- */
+// Original files gotten from arduino AVR core github 7/5/2020.
 
 #ifndef _SPI_H_INCLUDED
 #define _SPI_H_INCLUDED
@@ -25,9 +13,11 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/types.h>
-#include <linux/spi/spidev.h>
-
-#include <ros/ros.h>
+#include <linux/spi/spidev.h> // Enums and ioctl() data handler
+#include <stdio.h> // printf()
+#include <errno.h> // errno()
+// #include <stderr.h>
+#include <string.h> // strerr(), memset()
 
 #include <wiringPi.h> // For CS handling
 
@@ -60,7 +50,7 @@
 #define W_PI_HIGHEST_PIN 31
 #define PIN_VALUE_DEFAULT_CS 0xFF
 #define DEFAULT_SPI_DELAY 0 // Placeholder in case of future development
-#define DEFAULT_SPI_DEV_FILE "/dev/spidev0.0" // TODO
+#define DEFAULT_SPI_DEV_FILE "/dev/spidev0.0" // TODO: make this selectable
 #define SPI_VERBOSE 1
 
 // #define SPI_CLOCK_DIV4 0x00
@@ -165,31 +155,31 @@ public:
 		retW = ioctl(spiDeviceFile, SPI_IOC_WR_MODE, &mode);
 		retR = ioctl(spiDeviceFile, SPI_IOC_RD_MODE, &mode);
 		if (retR != 0 || retW != 0) {
-			ROS_ERROR(
-				"%s in %s:%d ioctl could not set modes for %s on device \"%s\" (fd=%d). Errno: %s",
-				__PRETTY_FUNCTION__, __FILE__, __LINE__,
+			printf(
+				"%s%s in %s:%d ioctl could not set modes for %s on device \"%s\" (fd=%d). Error: %s%s",
+				RED, __PRETTY_FUNCTION__, __FILE__, __LINE__,
 				((retR != 0) ? "read" : ((retW != 0) ? "read/write" : "write")),
-				DEFAULT_SPI_DEV_FILE, spiDeviceFile, std::strerror(errno));
+				DEFAULT_SPI_DEV_FILE, spiDeviceFile, strerror(errno), NO_COLOR);
 		}
 
 		retW = ioctl(spiDeviceFile, SPI_IOC_WR_BITS_PER_WORD, &bits);
 		retR = ioctl(spiDeviceFile, SPI_IOC_RD_BITS_PER_WORD, &bits);
 		if (retR != 0 || retW != 0) {
-			ROS_ERROR(
-				"%s in %s:%d ioctl could not set databits for %s on device \"%s\" (fd=%d). Errno: %s",
-				__PRETTY_FUNCTION__, __FILE__, __LINE__,
+			printf(
+				"%s%s in %s:%d ioctl could not set databits for %s on device \"%s\" (fd=%d). Error: %s%s",
+				RED, __PRETTY_FUNCTION__, __FILE__, __LINE__,
 				((retR != 0) ? "read" : ((retW != 0) ? "read/write" : "write")),
-				DEFAULT_SPI_DEV_FILE, spiDeviceFile, std::strerror(errno));
+				DEFAULT_SPI_DEV_FILE, spiDeviceFile, strerror(errno), NO_COLOR);
 		}
 
 		retW = ioctl(spiDeviceFile, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 		retR = ioctl(spiDeviceFile, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
 		if (retR != 0 || retW != 0) {
-			ROS_ERROR(
-				"%s in %s:%d ioctl could not set databits for %s on device \"%s\" (fd=%d). Errno: %s",
-				__PRETTY_FUNCTION__, __FILE__, __LINE__,
+			printf(
+				"%s%s in %s:%d ioctl could not set databits for %s on device \"%s\" (fd=%d). Error: %s%s",
+				RED, __PRETTY_FUNCTION__, __FILE__, __LINE__,
 				((retR != 0) ? "read" : ((retW != 0) ? "read/write" : "write")),
-				DEFAULT_SPI_DEV_FILE, spiDeviceFile, std::strerror(errno));
+				DEFAULT_SPI_DEV_FILE, spiDeviceFile, strerror(errno), NO_COLOR);
 		}
 
 		#ifdef SPI_VERBOSE
@@ -252,9 +242,9 @@ public:
 		if (csPin != PIN_VALUE_DEFAULT_CS) { // Don't use default CS pin
 			if (csPin > W_PI_HIGHEST_PIN) {
 				// Invalid pin (TODO: add other bad pins)
-				ROS_ERROR(
-					"%s in %s:%d Got invalid CS pin: %d. Using built in default SPI CS.",
-					__PRETTY_FUNCTION__, __FILE__, __LINE__, csPin);
+				printf(
+					"%s%s in %s:%d Got invalid CS pin: %d. Using built in default SPI CS.%s",
+					RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, csPin, NO_COLOR);
 				// mode &= ~SPI_NO_CS;
 				// csPin is used to check if WiringPi is needed later, so it must be set!
 				csPin = PIN_VALUE_DEFAULT_CS;
@@ -285,10 +275,10 @@ public:
 		// Finally, open the 'file' that represents the device
 		spiDeviceFile = open(DEFAULT_SPI_DEV_FILE, O_RDWR);
 		if (spiDeviceFile < 0) {
-			ROS_ERROR(
-				"%s in %s:%d could not get file descriptor (recieved fd %d) for device \"%s\". Errno: %s",
-				__PRETTY_FUNCTION__, __FILE__, __LINE__, spiDeviceFile,
-				DEFAULT_SPI_DEV_FILE, std::strerror(errno));
+			printf(
+				"%s%s in %s:%d could not get file descriptor (recieved fd %d) for device \"%s\". Error: %s%s",
+				RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, spiDeviceFile,
+				DEFAULT_SPI_DEV_FILE, strerror(errno), NO_COLOR);
 			return;
 		}
 
@@ -327,8 +317,8 @@ public:
 		printf("\tspeed: %d\n", iocSettings.speed_hz);
 		printf("\tdelay: %d\n", iocSettings.delay_usecs);
 		printf("\tbits: %d\n", iocSettings.bits_per_word);
-
 #endif /* ifdef SPI_VERBOSE */
+
 		if (csPin != PIN_VALUE_DEFAULT_CS)
 			digitalWrite(csPin, csActiveLevel()); // Enable CS
 		// Transfer data
@@ -336,10 +326,10 @@ public:
 		if (csPin != PIN_VALUE_DEFAULT_CS)
 			digitalWrite(csPin, csInactiveLevel()); // Disable CS
 		if (ret < 1) {
-			ROS_ERROR(
-				"%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Errno: %s",
-				__PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
-				spiDeviceFile, std::strerror(errno));
+			printf(
+				"%s%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Error: %s%s",
+				RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
+				spiDeviceFile, strerror(errno), NO_COLOR);
 		}
 
 		// printf("[byte=%d]", spiDeviceFile);
@@ -382,7 +372,6 @@ public:
 		printf("\tspeed: %d\n", iocSettings.speed_hz);
 		printf("\tdelay: %d\n", iocSettings.delay_usecs);
 		printf("\tbits: %d\n", iocSettings.bits_per_word);
-
 #endif /* ifdef SPI_VERBOSE */
 
 		if (csPin != PIN_VALUE_DEFAULT_CS)
@@ -392,10 +381,10 @@ public:
 		if (csPin != PIN_VALUE_DEFAULT_CS)
 			digitalWrite(csPin, csInactiveLevel()); // Disable CS
 		if (ret < 1) {
-			ROS_ERROR(
-				"%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Errno: %s",
-				__PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
-				spiDeviceFile, std::strerror(errno));
+			printf(
+				"%s%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Error: %s%s",
+				RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
+				spiDeviceFile, strerror(errno), NO_COLOR);
 		}
 		return ret;
 	} /* transfer16 */
@@ -440,17 +429,11 @@ public:
 		if (iocSettings.speed_hz != speed)
 			printf("SPI requested clock of %d, but the value will be set to %d.",
 			       speed, iocSettings.speed_hz);
-
 		printf("\n\tlen: %d\n", iocSettings.len);
 		printf("\tspeed: %d\n", iocSettings.speed_hz);
 		printf("\tdelay: %d\n", iocSettings.delay_usecs);
 		printf("\tbits: %d\n", iocSettings.bits_per_word);
-
 #endif /* ifdef SPI_VERBOSE */
-
-		printf("speed_hz: %d, (%d bytes), speed: %d, (%d bytes)\n",
-		       iocSettings.speed_hz, sizeof(iocSettings.speed_hz),
-		       speed, sizeof(speed));
 
 		if (csPin != PIN_VALUE_DEFAULT_CS)
 			digitalWrite(csPin, csActiveLevel()); // Enable CS
@@ -459,10 +442,10 @@ public:
 		if (csPin != PIN_VALUE_DEFAULT_CS)
 			digitalWrite(csPin, csInactiveLevel()); // Disable CS
 		if (ret < 1) {
-			ROS_ERROR(
-				"%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Errno: %s",
-				__PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
-				spiDeviceFile, std::strerror(errno));
+			printf(
+				"%s%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Errno: %s%s",
+				RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
+				spiDeviceFile, strerror(errno), NO_COLOR);
 		}
 		for (size_t i = 0; i < count; i++)
 			b[i] = rx[i];
@@ -517,14 +500,14 @@ public:
 	// This function is deprecated.  New applications should use
 	// beginTransaction() to configure SPI settings.
 	inline static void setClockDivider(uint8_t clockDiv) {
-		ROS_WARN(
-			"%s in %s:%d Set clock div called, but this is not implemented for the arduino/RPi port. No changes were made.",
-			__PRETTY_FUNCTION__, __FILE__, __LINE__);
+		printf(
+			"%s%s in %s:%d Set clock div called, but this is not implemented for the arduino/RPi port. No changes were made.%s",
+			RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, NO_COLOR);
 	} /* setClockDivider */
 
 	inline static void attachInterrupt() {
-		ROS_ERROR("%s in %s:%d This function is not implmented for the RPi port.",
-		          __PRETTY_FUNCTION__, __FILE__, __LINE__);
+		printf("%s%s in %s:%d This function is not implmented for the RPi port.%s",
+		       RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, NO_COLOR);
 	} /* attachInterrupt */
 
 	/**
@@ -532,11 +515,15 @@ public:
 	 */
 
 	inline static void detachInterrupt() {
-		ROS_ERROR("%s in %s:%d This function is not implmented for the RPi port.",
-		          __PRETTY_FUNCTION__, __FILE__, __LINE__);
+		printf("%s%s in %s:%d This function is not implmented for the RPi port.%s",
+		       RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, NO_COLOR);
 	} /* detachInterrupt */
 
 private:
+	// For error printing in red
+	static char RED[10];
+	static char NO_COLOR[7];
+
 	static uint8_t mode;
 	static uint8_t bits;
 	static uint32_t speed;

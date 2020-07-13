@@ -3,9 +3,11 @@
  * index by the 8-bit value to reverse.
  * Ex:
  * reversedBitTable[0b11000000] == 0b00000011
+ *
  * https://www.raspberrypi.org/forums/viewtopic.php?t=36288#p305432
  * Credit to John Cole for the table! (http://www.dexterindustries.com)
  */
+
 #ifndef BIT_REVERSE_H
 #define BIT_REVERSE_H
 

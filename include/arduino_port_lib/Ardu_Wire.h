@@ -2,7 +2,6 @@
 // Files modifications for port are marked with a # in comments
 // Original files gotten from arduino AVR core github 7/5/2020.
 
-
 #ifndef TWO_WIRE_H
 #define TWO_WIRE_H
 
@@ -11,7 +10,10 @@
 #include <unistd.h> // read(), write()
 #include <sys/ioctl.h> // ioctl()
 #include <stdint.h> // Explicit bitwidth integers like uint8_t
-#include <ros/ros.h> // ROS_ERROR()
+#include <stdio.h> // printf()
+#include <errno.h> // errno()
+// #include <stderr.h>
+#include <string.h> // strerr(), memset()
 
 #define I2C_DEVICE_FILE "/dev/i2c-1" // The I2C device node file
 // # From deprecated WiringPi
@@ -40,12 +42,17 @@
 #define WIRE_HAS_END 1
 
 // # Holds file descriptor for device node
-static int i2cDeviceFile;
-static uint8_t rxBufferLength;
 
 class TwoWire {
 private:
 
+	// For error printing in red
+	static char RED[10];
+	static char NO_COLOR[7];
+
+	static int i2cDeviceFile;
+
+	static uint8_t rxBufferLength;
 	static uint8_t rxBuffer[];
 	static uint8_t rxBufferIndex;
 	// static uint8_t rxBufferLength;
