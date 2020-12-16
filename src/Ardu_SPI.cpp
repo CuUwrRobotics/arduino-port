@@ -6,8 +6,8 @@
 
 SPIClass SPI;
 
-char RED[10] = "\033[1;31m";
-char NO_COLOR[7] = "\033[0m";
+char SPIClass::RED[10] = "\033[1;31m";
+char SPIClass::NO_COLOR[7] = "\033[0m";
 
 uint8_t SPIClass::mode = 0;
 uint8_t SPIClass::bits = 0;

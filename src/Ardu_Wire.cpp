@@ -362,7 +362,7 @@ int TwoWire::readBlock(uint8_t addr = txAddress, int length = BUFFER_LENGTH) {
 	// printf("\tResult: %d\n", s);
 	if (s < 0) {
 		printf(
-			"%s%s in %s:%d ioctl could not connect to I2C slave. FD %d (for device \"%s\"). Error: %s%s",
+			"%s%s in %s:%d ioctl could not connect to I2C. FD %d (for device \"%s\"). Error: %s%s",
 			RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, i2cDeviceFile,
 			I2C_DEVICE_FILE, strerror(errno), NO_COLOR);
 		return 4; // Generic error
