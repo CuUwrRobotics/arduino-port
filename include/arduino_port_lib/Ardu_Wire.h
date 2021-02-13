@@ -46,121 +46,117 @@
 class TwoWire {
 private:
 
-	// For error printing in red
-	static char RED[10];
-	static char NO_COLOR[7];
+  // For error printing in red
+  static char RED[10];
+  static char NO_COLOR[7];
 
-	static int i2cDeviceFile;
+  static int i2cDeviceFile;
 
-	static uint8_t rxBufferLength;
-	static uint8_t rxBuffer[];
-	static uint8_t rxBufferIndex;
-	// static uint8_t rxBufferLength;
+  static uint8_t rxBufferLength;
+  static uint8_t rxBuffer[];
+  static uint8_t rxBufferIndex;
+  // static uint8_t rxBufferLength;
 
-	static uint8_t txAddress;
-	static uint8_t txBuffer[];
-	static uint8_t txBufferIndex;
-	// static uint8_t txBufferLength; // # Removed for port
+  static uint8_t txAddress;
+  static uint8_t txBuffer[];
+  static uint8_t txBufferIndex;
+  // static uint8_t txBufferLength; // # Removed for port
 
-	static uint8_t transmitting;
-	static void (*user_onRequest)(void);
-	static void (*user_onReceive)(int);
+  static uint8_t transmitting;
+  static void (*user_onRequest)(void);
+  static void (*user_onReceive)(int);
 
-	static void onRequestService(void);
+  static void onRequestService(void);
 
-	static void onReceiveService(uint8_t *, int);
+  static void onReceiveService(uint8_t *, int);
 public:
-	TwoWire();
+  TwoWire();
 
-	void begin();
+  void begin();
 
-	void begin(uint8_t);
+  void begin(uint8_t);
 
-	void begin(int);
+  void begin(int);
 
-	void end();
+  void end();
 
-	void setClock(uint32_t);
+  void setClock(uint32_t);
 
-	void setWireTimeout(uint32_t timeout = 25000, bool reset_with_timeout =
-												false);
+  void setWireTimeout(uint32_t timeout = 25000, bool reset_with_timeout =
+                      false);
 
-	bool getWireTimeoutFlag(void);
+  bool getWireTimeoutFlag(void);
 
-	void clearWireTimeoutFlag(void);
+  void clearWireTimeoutFlag(void);
 
-	void beginTransmission(uint8_t);
+  void beginTransmission(uint8_t);
 
-	void beginTransmission(int);
+  void beginTransmission(int);
 
-	uint8_t endTransmission(void);
+  uint8_t endTransmission(void);
 
-	uint8_t endTransmission(uint8_t);
+  uint8_t endTransmission(uint8_t);
 
-	uint8_t requestFrom(uint8_t, uint8_t);
+  uint8_t requestFrom(uint8_t, uint8_t);
 
-	uint8_t requestFrom(uint8_t, uint8_t, uint8_t);
+  uint8_t requestFrom(uint8_t, uint8_t, uint8_t);
 
-	uint8_t requestFrom(uint8_t, uint8_t, uint32_t, uint8_t, uint8_t);
+  uint8_t requestFrom(uint8_t, uint8_t, uint32_t, uint8_t, uint8_t);
 
-	uint8_t requestFrom(int, int);
+  virtual size_t write(uint8_t);
 
-	uint8_t requestFrom(int, int, int);
+  virtual size_t write(const uint8_t *, size_t);
 
-	virtual size_t write(uint8_t);
+  virtual int readBlock(uint8_t addr, int length); // # Added for RPI port
 
-	virtual size_t write(const uint8_t *, size_t);
+  virtual int available(void);
 
-	virtual int readBlock(uint8_t addr, int length); // # Added for RPI port
+  virtual int read(void);
 
-	virtual int available(void);
+  virtual int peek(void);
 
-	virtual int read(void);
+  virtual void flush(void);
 
-	virtual int peek(void);
+  void onReceive( void (*)(int));
 
-	virtual void flush(void);
+  void onRequest( void (*)(void));
 
-	void onReceive( void (*)(int));
+  /**
+   * @param n TODO
+   * @return TODO
+   */
 
-	void onRequest( void (*)(void));
+  inline size_t write(unsigned long n) {
+    return write((uint8_t)n);
+  } /* write */
 
-	/**
-	 * @param n TODO
-	 * @return TODO
-	 */
+  /**
+   * @param n TODO
+   * @return TODO
+   */
 
-	inline size_t write(unsigned long n) {
-		return write((uint8_t)n);
-	} /* write */
+  inline size_t write(long n) {
+    return write((uint8_t)n);
+  } /* write */
 
-	/**
-	 * @param n TODO
-	 * @return TODO
-	 */
+  /**
+   * @param n TODO
+   * @return TODO
+   */
 
-	inline size_t write(long n) {
-		return write((uint8_t)n);
-	} /* write */
+  inline size_t write(unsigned int n) {
+    return write((uint8_t)n);
+  } /* write */
 
-	/**
-	 * @param n TODO
-	 * @return TODO
-	 */
+  /**
+   * @param n TODO
+   * @return TODO
+   */
 
-	inline size_t write(unsigned int n) {
-		return write((uint8_t)n);
-	} /* write */
-
-	/**
-	 * @param n TODO
-	 * @return TODO
-	 */
-
-	inline size_t write(int n) {
-		return write((uint8_t)n);
-	} /* write */
-	  // using Print::write;
+  inline size_t write(int n) {
+    return write((uint8_t)n);
+  } /* write */
+    // using Print::write;
 };
 
 extern TwoWire Wire;
