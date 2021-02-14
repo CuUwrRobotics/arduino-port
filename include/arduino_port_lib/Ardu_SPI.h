@@ -2,7 +2,7 @@
  * @Author: Nick Steele
  * @Date:   19:49 Aug 10 2020
  * @Last modified by:   Nick Steele
- * @Last modified time: 20:55 Feb 13 2021
+ * @Last modified time: 20:56 Feb 13 2021
  */
 
 // Modified by Nicholas Steele to help port Arduino libraries to Raspberry Pi
@@ -343,7 +343,7 @@ public:
     }
 
     // printf("[byte=%d]", spiDeviceFile);
-    return ret;
+    return rx;
   } /* transfer */
 
   inline static uint16_t transfer16(uint16_t data, bool
@@ -397,7 +397,7 @@ public:
         RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
         spiDeviceFile, strerror(errno), NO_COLOR);
     }
-    return ret;
+    return rx;
   } /* transfer16 */
 
 /**
