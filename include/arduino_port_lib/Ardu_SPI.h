@@ -21,7 +21,7 @@
 
 #include <wiringPi.h> // For CS handling
 
-#include "BitReverse.h" // For software bit reversal. Just contains a table.
+#include "arduino_port_lib/BitReverse.h" // For software bit reversal. Just contains a table.
 
 // #include <Arduino.h>
 
