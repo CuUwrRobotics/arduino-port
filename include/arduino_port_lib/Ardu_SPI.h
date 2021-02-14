@@ -2,7 +2,7 @@
  * @Author: Nick Steele
  * @Date:   19:49 Aug 10 2020
  * @Last modified by:   Nick Steele
- * @Last modified time: 20:56 Feb 13 2021
+ * @Last modified time: 22:15 Feb 13 2021
  */
 
 // Modified by Nicholas Steele to help port Arduino libraries to Raspberry Pi
@@ -25,8 +25,6 @@
 #include <errno.h> // errno()
 // #include <stderr.h>
 #include <string.h> // strerr(), memset()
-
-#include <wiringPi.h> // For CS handling
 
 #include "arduino_port_lib/BitReverse.h" // For software bit reversal. Just contains a table.
 
@@ -139,399 +137,70 @@ class SPIClass {
 public:
 
   // Initialize the SPI library
-  static void begin();
+  void begin();
 
   // If SPI is used from within an interrupt, this function registers
   // that interrupt with the SPI library, so beginTransaction() can
   // prevent conflicts.  The input interruptNumber is the number used
   // with attachInterrupt.  If SPI is used from a different interrupt
   // (eg, a timer), interruptNumber should be 255.
-  static void usingInterrupt(uint8_t interruptNumber);
+  void usingInterrupt(uint8_t interruptNumber);
 
   // And this does the opposite.
-  static void notUsingInterrupt(uint8_t interruptNumber);
+  void notUsingInterrupt(uint8_t interruptNumber);
   // Note: the usingInterrupt and notUsingInterrupt functions should
   // not to be called from ISR context or inside a transaction.
   // For details see:
   // https://github.com/arduino/Arduino/pull/2381
   // https://github.com/arduino/Arduino/pull/2449
 
-  inline static void updateDeviceSettings(){
-    int retW;
-    int retR;
-    retW = ioctl(spiDeviceFile, SPI_IOC_WR_MODE, &mode);
-    retR = ioctl(spiDeviceFile, SPI_IOC_RD_MODE, &mode);
-    if (retR != 0 || retW != 0) {
-      printf(
-        "%s%s in %s:%d ioctl could not set modes for %s on device \"%s\" (fd=%d). Error: %s%s",
-        RED, __PRETTY_FUNCTION__, __FILE__, __LINE__,
-        ((retR != 0) ? "read" : ((retW != 0) ? "read/write" : "write")),
-        DEFAULT_SPI_DEV_FILE, spiDeviceFile, strerror(errno), NO_COLOR);
-    }
-
-    retW = ioctl(spiDeviceFile, SPI_IOC_WR_BITS_PER_WORD, &bits);
-    retR = ioctl(spiDeviceFile, SPI_IOC_RD_BITS_PER_WORD, &bits);
-    if (retR != 0 || retW != 0) {
-      printf(
-        "%s%s in %s:%d ioctl could not set databits for %s on device \"%s\" (fd=%d). Error: %s%s",
-        RED, __PRETTY_FUNCTION__, __FILE__, __LINE__,
-        ((retR != 0) ? "read" : ((retW != 0) ? "read/write" : "write")),
-        DEFAULT_SPI_DEV_FILE, spiDeviceFile, strerror(errno), NO_COLOR);
-    }
-
-    retW = ioctl(spiDeviceFile, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
-    retR = ioctl(spiDeviceFile, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
-    if (retR != 0 || retW != 0) {
-      printf(
-        "%s%s in %s:%d ioctl could not set databits for %s on device \"%s\" (fd=%d). Error: %s%s",
-        RED, __PRETTY_FUNCTION__, __FILE__, __LINE__,
-        ((retR != 0) ? "read" : ((retW != 0) ? "read/write" : "write")),
-        DEFAULT_SPI_DEV_FILE, spiDeviceFile, strerror(errno), NO_COLOR);
-    }
-
-    #ifdef SPI_VERBOSE
-    // mode = 0; // TODO
-    printf("SPI Settings: \n");
-    printf("\tMode: 0x%2x\n", mode);
-    printf("\tBits: %d\n", bits);
-    printf("\tSpeed: %d Hz (%d kHz)\n", speed, speed / 1000);
-    #endif /* ifdef SPI_VERBOSE */
-  } /* updateDeviceSettings */
+  void updateDeviceSettings();
 
 /**
  */
 
-  inline static void beginTransaction(SPISettings settings) {
-    // Configures SPI setups and modes
-    // Reset mode first
-    mode = 0;
-
-    // Never uses loopback
-    // mode &= ~SPI_LOOP; // Loopback
-
-    // Clock frequency
-    speed = settings.clockHzSet; // Clock speed in Hz
-
-    // Clock edge settings
-    switch (settings.dataModeSet) {
-    case SPI_MODE0: // CPOL = 0, CPHA = 0
-      mode &= ~SPI_CPOL;
-      mode &= ~SPI_CPHA;
-      break;
-    case SPI_MODE1: // CPOL = 0, CPHA = 1
-      mode &= ~SPI_CPOL;
-      mode |= SPI_CPHA;
-      break;
-    case SPI_MODE2: // CPOL = 1, CPHA = 0
-      mode |= SPI_CPOL;
-      mode &= ~SPI_CPHA;
-      break;
-    case SPI_MODE3: // CPOL = 1, CPHA = 1
-      mode |= SPI_CPOL;
-      mode |= SPI_CPHA;
-      break;
-    } /* switch */
-
-    // Bit order. Setting LSB first on linux SPI interface breaks it, so this is
-    // done in software.
-    if (settings.bitOrderSet == LSBFIRST)
-      lsbFirst = true;
-    else lsbFirst = false;
-
-    // Set up whether the CS pin is active high
-    csHigh = settings.csHighSet;
-    if (settings.csHighSet)
-      mode |= SPI_CS_HIGH; // Chip Enable = HIGH
-    else mode &= ~SPI_CS_HIGH; // Chip Enable = LOW
-
-    // CS Pin number setup
-    csPin = settings.csPinSet; // Save the pin to use
-    if (csPin != PIN_VALUE_DEFAULT_CS) { // Don't use default CS pin
-      if (csPin > W_PI_HIGHEST_PIN) {
-        // Invalid pin (TODO: add other bad pins)
-        printf(
-          "%s%s in %s:%d Got invalid CS pin: %d. Using built in default SPI CS.%s",
-          RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, csPin, NO_COLOR);
-        // mode &= ~SPI_NO_CS;
-        // csPin is used to check if WiringPi is needed later, so it must be set!
-        csPin = PIN_VALUE_DEFAULT_CS;
-      } else {
-        // Get wiringpi going.
-        // csPin = settings.csPinSet; // Save the pin to use
-        mode |= SPI_NO_CS; // Detaches normal chip select pin
-        wiringPiSetup();
-        pinMode(csPin, OUTPUT);
-        digitalWrite(csPin, csInactiveLevel()); // Disable CS
-        // printf("\nusing wpi %d\n", csPin);
-      }
-    }	else mode &= ~SPI_NO_CS; // Use default pin
-
-    // Databits
-    bits = settings.bitsSet; // untested
-
-    // Don't know what this does, but it must be important sometimes
-    if (settings.spiReadySet)
-      mode |= SPI_READY; // untested
-    else mode &= ~SPI_READY;
-
-    // 3 Wire mode
-    if (settings.threeWireSet)
-      mode |= SPI_3WIRE; // untested
-    else mode &= ~SPI_3WIRE;
-
-    // Finally, open the 'file' that represents the device
-    spiDeviceFile = open(DEFAULT_SPI_DEV_FILE, O_RDWR);
-    #ifdef SPI_VERBOSE
-    printf("Device File: %d\n", spiDeviceFile);
-    #endif /* ifdef SPI_DEBUG */
-    if (spiDeviceFile < 0) {
-      printf(
-        "%s%s in %s:%d could not get file descriptor (recieved fd %d) for device \"%s\". Error: %s%s",
-        RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, spiDeviceFile,
-        DEFAULT_SPI_DEV_FILE, strerror(errno), NO_COLOR);
-      return;
-    }
-
-    updateDeviceSettings();
-  } /* beginTransaction */
+  void beginTransaction(SPISettings settings);
 
 /**
  */
 
-  inline static uint8_t transfer(uint8_t data, bool disable_cs_after_xfer) {
-    // Write to the SPI bus (MOSI pin) and also receive (MISO pin)
-    int ret;
-    uint8_t tx; // Byte to store data. If data needs inverting, this is used.
-    uint8_t rx; // Single byte var to store recieved data
+  uint8_t transfer(uint8_t data, bool disable_cs_after_xfer);
 
-    if (lsbFirst) tx = reversedBitTable[data];
-    else tx = data;
-
-    // Set up data to send, lengths, and general settings
-    struct spi_ioc_transfer iocSettings = {
-      // .tx_buf = (unsigned long)&data,
-      .tx_buf = (unsigned long)&tx,
-      .rx_buf = (unsigned long)&rx,
-      .len = 1,
-      .speed_hz = speed, // TODO
-      .delay_usecs = DEFAULT_SPI_DELAY,
-      .bits_per_word = bits,
-    };
-
-#ifdef SPI_VERBOSE
-    if (iocSettings.speed_hz != speed)
-      printf("SPI requested clock of %d, but the value will be set to %d.",
-             speed, iocSettings.speed_hz);
-
-    printf("\n\tlen: %d\n", iocSettings.len);
-    printf("\tspeed: %d\n", iocSettings.speed_hz);
-    printf("\tdelay: %d\n", iocSettings.delay_usecs);
-    printf("\tbits: %d\n", iocSettings.bits_per_word);
-#endif /* ifdef SPI_VERBOSE */
-
-    if (csPin != PIN_VALUE_DEFAULT_CS)
-      digitalWrite(csPin, csActiveLevel()); // Enable CS
-    // Transfer data
-    ret = ioctl(spiDeviceFile, SPI_IOC_MESSAGE(1), &iocSettings);
-    if (csPin != PIN_VALUE_DEFAULT_CS && disable_cs_after_xfer)
-      digitalWrite(csPin, csInactiveLevel()); // Disable CS
-    if (ret < 1) {
-      printf(
-        "%s%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Error: %s%s",
-        RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
-        spiDeviceFile, strerror(errno), NO_COLOR);
-    }
-
-    // printf("[byte=%d]", spiDeviceFile);
-    return rx;
-  } /* transfer */
-
-  inline static uint16_t transfer16(uint16_t data, bool
-                                    disable_cs_after_xfer) {
-    // Write to the SPI bus (MOSI pin) and also receive (MISO pin)
-    int ret;
-    uint8_t tx[2] = {0};
-    uint16_t rx; // Two byte var to store recieved data
-
-    if (lsbFirst) {
-      // Reversal accounts for full 16-bit integer, so reversed binary values are
-      // computed and bytes are swapped.
-      tx[1] = (reversedBitTable[(data & 0xFF00) >> 8]);
-      tx[0] = (reversedBitTable[data & 0x00FF]);
-    } else {
-      // No reversal, just assign values
-      tx[0] = ((data & 0xFF00) >> 8);
-      tx[1] = (data & 0x00FF);
-    }
-
-    // Set up data to send, lengths, and general settings
-    struct spi_ioc_transfer iocSettings = {
-      .tx_buf = (unsigned long)&tx,
-      .rx_buf = (unsigned long)&rx,
-      .len = 2,
-      .speed_hz = speed, // TODO
-      .delay_usecs = DEFAULT_SPI_DELAY,
-      .bits_per_word = bits,
-    };
-
-#ifdef SPI_VERBOSE
-    if (iocSettings.speed_hz != speed)
-      printf("SPI requested clock of %d, but the value will be set to %d.",
-             speed, iocSettings.speed_hz);
-
-    printf("\n\tlen: %d\n", iocSettings.len);
-    printf("\tspeed: %d\n", iocSettings.speed_hz);
-    printf("\tdelay: %d\n", iocSettings.delay_usecs);
-    printf("\tbits: %d\n", iocSettings.bits_per_word);
-#endif /* ifdef SPI_VERBOSE */
-
-    if (csPin != PIN_VALUE_DEFAULT_CS)
-      digitalWrite(csPin, csActiveLevel()); // Enable CS
-    // Transfer data
-    ret = ioctl(spiDeviceFile, SPI_IOC_MESSAGE(1), &iocSettings);
-    if (csPin != PIN_VALUE_DEFAULT_CS && disable_cs_after_xfer)
-      digitalWrite(csPin, csInactiveLevel()); // Disable CS
-    if (ret < 1) {
-      printf(
-        "%s%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Error: %s%s",
-        RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
-        spiDeviceFile, strerror(errno), NO_COLOR);
-    }
-    return rx;
-  } /* transfer16 */
+  uint16_t transfer16(uint16_t data, bool
+                      disable_cs_after_xfer);
 
 /**
  */
 
-  inline static void transfer(void *buf, size_t count, bool
-                              disable_cs_after_xfer) {
-    // Write to the SPI bus (MOSI pin) and also receive (MISO pin)
-    int ret;
-    uint8_t *b = (uint8_t *) buf;
-    // Buffers for data storage (can't pass &buf or &b to ioctl, it will mangle the data)
-    uint8_t tx[count] = {0};
-    uint8_t rx[count] = {0};
-
-    if (lsbFirst) {
-      // printf("variable bit, reversal: \n");
-      for (size_t i = 0; i < count; i++) {
-        tx[i] = reversedBitTable[b[i]];
-        // printf("\t0x%2x --> ", b[i]);
-        // printf("0x%2x, \n", tx[i]);
-      }
-    } else {
-      // printf("variable bit, NO reversal: \n");
-      for (size_t i = 0; i < count; i++) {
-        tx[i] = b[i];
-        // printf("\t0x%2x\n", tx[i]);
-      }
-    }
-
-    // Set up data to send, lengths, and general settings
-    struct spi_ioc_transfer iocSettings = {
-      .tx_buf = (unsigned long)&tx,
-      .rx_buf = (unsigned long)&rx,
-      .len = count,
-      .speed_hz = speed, // TODO
-      .delay_usecs = DEFAULT_SPI_DELAY,
-      .bits_per_word = bits,
-    };
-
-#ifdef SPI_VERBOSE
-    if (iocSettings.speed_hz != speed)
-      printf("SPI requested clock of %d, but the value will be set to %d.",
-             speed, iocSettings.speed_hz);
-    printf("\n\tlen: %d\n", iocSettings.len);
-    printf("\tspeed: %d\n", iocSettings.speed_hz);
-    printf("\tdelay: %d\n", iocSettings.delay_usecs);
-    printf("\tbits: %d\n", iocSettings.bits_per_word);
-#endif /* ifdef SPI_VERBOSE */
-
-    if (csPin != PIN_VALUE_DEFAULT_CS)
-      digitalWrite(csPin, csActiveLevel()); // Enable CS
-    // Transfer data
-    ret = ioctl(spiDeviceFile, SPI_IOC_MESSAGE(1), &iocSettings);
-    if (csPin != PIN_VALUE_DEFAULT_CS && disable_cs_after_xfer)
-      digitalWrite(csPin, csInactiveLevel()); // Disable CS
-    if (ret < 1) {
-      printf(
-        "%s%s in %s:%d ioctl could not perform a data transfer on device \"%s\" (fd=%d). Errno: %s%s",
-        RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, DEFAULT_SPI_DEV_FILE,
-        spiDeviceFile, strerror(errno), NO_COLOR);
-    }
-    for (size_t i = 0; i < count; i++)
-      b[i] = rx[i];
-    return;
-  } /* transfer */
+  void transfer(void *buf, size_t count, bool
+                disable_cs_after_xfer);
 
 /**
  */
-  inline static void endTransaction(void) {
-    if (csPin != PIN_VALUE_DEFAULT_CS)
-      digitalWrite(csPin, csInactiveLevel()); // Disable CS
-    close(spiDeviceFile);
-    #ifdef SPI_VERBOSE
-    printf("Closing SPI\n");
-    #endif /* ifdef SPI_VERBOSE */
-  } /* endTransaction */
+  void endTransaction(void);
 
   // Disable the SPI bus
-  static void end();
+  void end();
 
   // This function is deprecated.  New applications should use
   // beginTransaction() to configure SPI settings.
-  inline static void setBitOrder(uint8_t bitOrder) {
-    if (bitOrder == LSBFIRST)
-      mode |= SPI_LSB_FIRST;
-    else mode &= ~SPI_LSB_FIRST; // TODO: verify this
-    updateDeviceSettings();
-  } /* setBitOrder */
+  void setBitOrder(uint8_t bitOrder);
 
   // This function is deprecated.  New applications should use
   // beginTransaction() to configure SPI settings.
-  inline static void setDataMode(uint8_t dataMode) {
-    switch (dataMode) {
-    case SPI_MODE0: // CPOL = 0, CPHA = 0
-      mode &= ~SPI_CPOL;
-      mode &= ~SPI_CPHA;
-      break;
-    case SPI_MODE1: // CPOL = 0, CPHA = 1
-      mode &= ~SPI_CPOL;
-      mode |= SPI_CPHA;
-      break;
-    case SPI_MODE2: // CPOL = 1, CPHA = 0
-      mode |= SPI_CPOL;
-      mode &= ~SPI_CPHA;
-      break;
-    case SPI_MODE3: // CPOL = 1, CPHA = 1
-      mode |= SPI_CPOL;
-      mode |= SPI_CPHA;
-      break;
-    } /* switch */
-    updateDeviceSettings();
-  } /* setDataMode */
+  void setDataMode(uint8_t dataMode);
 
   // This function is deprecated.  New applications should use
   // beginTransaction() to configure SPI settings.
-  inline static void setClockDivider(uint8_t clockDiv) {
-    printf(
-      "%s%s in %s:%d Set clock div called, but this is not implemented for the arduino/RPi port. No changes were made.%s",
-      RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, NO_COLOR);
-  } /* setClockDivider */
+  void setClockDivider(uint8_t clockDiv);
 
-  inline static void attachInterrupt() {
-    printf("%s%s in %s:%d This function is not implmented for the RPi port.%s",
-           RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, NO_COLOR);
-  } /* attachInterrupt */
+  void attachInterrupt();
 
   /**
    *
    */
 
-  inline static void detachInterrupt() {
-    printf("%s%s in %s:%d This function is not implmented for the RPi port.%s",
-           RED, __PRETTY_FUNCTION__, __FILE__, __LINE__, NO_COLOR);
-  } /* detachInterrupt */
+  void detachInterrupt();
 
 private:
   // For error printing in red
@@ -545,24 +214,20 @@ private:
   static uint8_t csPin; // WiringPi CS pin
   static bool csHigh;
   static uint8_t spiDeviceFile;
-  // static const char *device;
+// const char *device;
 
   static uint8_t initialized;
 
-  // Interrupts not used for port
+// Interrupts not used for port
   static uint8_t interruptMode; // 0=none, 1=mask, 2=global
   static uint8_t interruptMask; // which interrupts to mask
   static uint8_t interruptSave; // temp storage, to restore state
 
-  // Returns the inactive (disabled) level for current SPI conenction.
-  inline static uint8_t csInactiveLevel(){
-    return (csHigh ? LOW : HIGH);
-  } /* csInactiveLevel */
+// Returns the inactive (disabled) level for current SPI conenction.
+  static uint8_t csInactiveLevel();
 
-  // Returns the active (enabled) level for current SPI conenction.
-  inline static uint8_t csActiveLevel(){
-    return (csHigh ? HIGH : LOW);
-  } /* csActiveLevel */
+// Returns the active (enabled) level for current SPI conenction.
+  static uint8_t csActiveLevel();
 };
 
 extern SPIClass SPI;
