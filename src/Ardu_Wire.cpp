@@ -1,3 +1,10 @@
+/**
+ * @Author: Nick Steele
+ * @Date:   19:49 Aug 10 2020
+ * @Last modified by:   Nick Steele
+ * @Last modified time: 19:21 Feb 13 2021
+ */
+
 // Modified by Nicholas Steele to help port Arduino libraries to Raspberry Pi
 // Files modifications for port are marked with a # in comments
 // Original files gotten from arduino AVR core github 7/5/2020.

@@ -1,3 +1,10 @@
+/**
+ * @Author: Nick Steele
+ * @Date:   19:49 Aug 10 2020
+ * @Last modified by:   Nick Steele
+ * @Last modified time: 19:21 Feb 13 2021
+ */
+
 #include "Ardu_Wire.h" // Arduino wire port
 uint8_t i2cAddr = 0x3C;
 uint8_t helloMsg[8] = "HELLO!\n";

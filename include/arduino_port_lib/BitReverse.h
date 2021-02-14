@@ -1,4 +1,11 @@
 /**
+ * @Author: Nick Steele
+ * @Date:   18:58 Feb 13 2021
+ * @Last modified by:   Nick Steele
+ * @Last modified time: 19:21 Feb 13 2021
+ */
+
+/**
  * For software implementation of changing from MSB first to LSB first. To use,
  * index by the 8-bit value to reverse.
  * Ex:

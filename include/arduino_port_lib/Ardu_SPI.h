@@ -1,3 +1,10 @@
+/**
+ * @Author: Nick Steele
+ * @Date:   19:49 Aug 10 2020
+ * @Last modified by:   Nick Steele
+ * @Last modified time: 19:20 Feb 13 2021
+ */
+
 // Modified by Nicholas Steele to help port Arduino libraries to Raspberry Pi
 // Files modifications for port are marked with a # in comments
 // Original files gotten from arduino AVR core github 7/5/2020.
@@ -51,7 +58,7 @@
 #define PIN_VALUE_DEFAULT_CS 0xFF
 #define DEFAULT_SPI_DELAY 0 // Placeholder in case of future development
 #define DEFAULT_SPI_DEV_FILE "/dev/spidev0.0" // TODO: make this selectable
-#define SPI_VERBOSE 1
+// #define SPI_VERBOSE 1
 
 // #define SPI_CLOCK_DIV4 0x00
 // #define SPI_CLOCK_DIV16 0x01
