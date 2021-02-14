@@ -2,7 +2,7 @@
  * @Author: Nick Steele
  * @Date:   19:49 Aug 10 2020
  * @Last modified by:   Nick Steele
- * @Last modified time: 19:20 Feb 13 2021
+ * @Last modified time: 20:55 Feb 13 2021
  */
 
 // Modified by Nicholas Steele to help port Arduino libraries to Raspberry Pi
@@ -281,6 +281,9 @@ public:
 
     // Finally, open the 'file' that represents the device
     spiDeviceFile = open(DEFAULT_SPI_DEV_FILE, O_RDWR);
+    #ifdef SPI_VERBOSE
+    printf("Device File: %d\n", spiDeviceFile);
+    #endif /* ifdef SPI_DEBUG */
     if (spiDeviceFile < 0) {
       printf(
         "%s%s in %s:%d could not get file descriptor (recieved fd %d) for device \"%s\". Error: %s%s",
@@ -295,7 +298,7 @@ public:
 /**
  */
 
-  inline static uint8_t transfer(uint8_t data) {
+  inline static uint8_t transfer(uint8_t data, bool disable_cs_after_xfer) {
     // Write to the SPI bus (MOSI pin) and also receive (MISO pin)
     int ret;
     uint8_t tx; // Byte to store data. If data needs inverting, this is used.
@@ -330,7 +333,7 @@ public:
       digitalWrite(csPin, csActiveLevel()); // Enable CS
     // Transfer data
     ret = ioctl(spiDeviceFile, SPI_IOC_MESSAGE(1), &iocSettings);
-    if (csPin != PIN_VALUE_DEFAULT_CS)
+    if (csPin != PIN_VALUE_DEFAULT_CS && disable_cs_after_xfer)
       digitalWrite(csPin, csInactiveLevel()); // Disable CS
     if (ret < 1) {
       printf(
@@ -343,7 +346,8 @@ public:
     return ret;
   } /* transfer */
 
-  inline static uint16_t transfer16(uint16_t data) {
+  inline static uint16_t transfer16(uint16_t data, bool
+                                    disable_cs_after_xfer) {
     // Write to the SPI bus (MOSI pin) and also receive (MISO pin)
     int ret;
     uint8_t tx[2] = {0};
@@ -385,7 +389,7 @@ public:
       digitalWrite(csPin, csActiveLevel()); // Enable CS
     // Transfer data
     ret = ioctl(spiDeviceFile, SPI_IOC_MESSAGE(1), &iocSettings);
-    if (csPin != PIN_VALUE_DEFAULT_CS)
+    if (csPin != PIN_VALUE_DEFAULT_CS && disable_cs_after_xfer)
       digitalWrite(csPin, csInactiveLevel()); // Disable CS
     if (ret < 1) {
       printf(
@@ -399,7 +403,8 @@ public:
 /**
  */
 
-  inline static void transfer(void *buf, size_t count) {
+  inline static void transfer(void *buf, size_t count, bool
+                              disable_cs_after_xfer) {
     // Write to the SPI bus (MOSI pin) and also receive (MISO pin)
     int ret;
     uint8_t *b = (uint8_t *) buf;
@@ -446,7 +451,7 @@ public:
       digitalWrite(csPin, csActiveLevel()); // Enable CS
     // Transfer data
     ret = ioctl(spiDeviceFile, SPI_IOC_MESSAGE(1), &iocSettings);
-    if (csPin != PIN_VALUE_DEFAULT_CS)
+    if (csPin != PIN_VALUE_DEFAULT_CS && disable_cs_after_xfer)
       digitalWrite(csPin, csInactiveLevel()); // Disable CS
     if (ret < 1) {
       printf(
@@ -462,6 +467,8 @@ public:
 /**
  */
   inline static void endTransaction(void) {
+    if (csPin != PIN_VALUE_DEFAULT_CS)
+      digitalWrite(csPin, csInactiveLevel()); // Disable CS
     close(spiDeviceFile);
     #ifdef SPI_VERBOSE
     printf("Closing SPI\n");
